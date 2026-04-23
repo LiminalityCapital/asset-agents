@@ -1,0 +1,4 @@
+openai
+azure-search-documents
+python-dotenv
+psycopg[binary]>=3.1
