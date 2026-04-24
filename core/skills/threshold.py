@@ -6,6 +6,8 @@ and a `Rule`. Returns a Signal when the rule fires, else None.
 Rule logic lives in a registry — add a new metric by dropping one function
 and one entry in `_RULES`. No caller changes."""
 
+from __future__ import annotations
+
 import logging
 from typing import Callable
 

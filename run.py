@@ -12,6 +12,8 @@ The normal run:
   5. memory.record(signal, output)            → JSONL
 """
 
+from __future__ import annotations
+
 import argparse
 import importlib
 import logging

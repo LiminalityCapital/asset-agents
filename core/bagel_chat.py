@@ -5,6 +5,8 @@ is stored under that user's blob prefix. When the same human clicks the link,
 Bagel's identity flow resolves them to the same user_id and the session loads.
 """
 
+from __future__ import annotations
+
 import json
 import os
 import urllib.error

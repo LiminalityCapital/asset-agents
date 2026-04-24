@@ -8,9 +8,8 @@ RELEVANCE_THRESHOLD = 1.5
 
 # Signed threshold — the single knob that picks direction AND magnitude:
 #   positive  → fire on USD/JPY up   (USD-strong)
-#   negative  → fire on USD/JPY down (USD-weak)
-# Prod intent: -1.0 (fire on USD-weak ≥1%). Currently lowered for testing.
-MATERIALITY_PCT = 0.3
+#   negative  → fire on USD/JPY down (USD-weak / JPY-strong)
+MATERIALITY_PCT = -1.0
 
 # Probe + rule handed to core.skills.threshold.evaluate.
 PROBE = usdjpy_dod_pct_change
