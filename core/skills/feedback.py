@@ -4,6 +4,8 @@ MVP ingestion is CLI-only (see run.py `feedback` subcommand). Deferred
 sources (Teams reaction webhook, Bagel engagement) append to the same
 file with different `source` tags; no schema change needed."""
 
+from __future__ import annotations
+
 import json
 import logging
 import os

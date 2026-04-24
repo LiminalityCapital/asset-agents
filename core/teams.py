@@ -1,5 +1,7 @@
 """Post alerts to Teams via a Power Automate webhook workflow."""
 
+from __future__ import annotations
+
 import json
 import os
 import urllib.error
