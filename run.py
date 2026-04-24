@@ -1,8 +1,8 @@
 """Dispatcher.
 
 Two subcommands:
-  python run.py <agent>                           # normal cron-style run
-  python run.py <agent> feedback <run_id> ...     # record analyst feedback
+  python run.py <agent> [--threshold SIGNED_PCT]      # normal cron-style run
+  python run.py <agent> feedback <run_id> ...         # record analyst feedback
 
 The normal run:
   1. threshold.evaluate(probe, rule)          → Signal | None
@@ -10,6 +10,12 @@ The normal run:
   3. orchestrate(trigger) + synthesize + safety   (downstream unchanged)
   4. deliver (Teams + Bagel) if configured
   5. memory.record(signal, output)            → JSONL
+
+--threshold is a signed percent that overrides the agent's MATERIALITY_PCT
+for this run only (useful for testing):
+  positive  → fire on up move (e.g. --threshold=1.0)
+  negative  → fire on down move (e.g. --threshold=-1.0)
+Use the "=" form in shells/cron to avoid argparse mis-parsing the leading "-".
 """
 
 from __future__ import annotations
@@ -34,6 +40,7 @@ logging.basicConfig(
 for noisy in ("azure", "openai", "httpx", "urllib3"):
     logging.getLogger(noisy).setLevel(logging.WARNING)
 
+from core.models import Rule
 from core.orchestrator import run as orchestrate
 from core.synthesis import synthesize
 from core.safety import check as safety_check
@@ -90,14 +97,36 @@ def _trigger_dict_from_signal(signal) -> dict:
     }
 
 
-def cmd_run(agent_name: str) -> None:
+def cmd_run(agent_name: str, argv: list[str]) -> None:
+    p = argparse.ArgumentParser(prog=f"run.py {agent_name}")
+    p.add_argument(
+        "--threshold",
+        type=float,
+        default=None,
+        help="Override MATERIALITY_PCT for this run (signed pct). "
+             "Positive fires on up moves, negative on down. "
+             "Use --threshold=-1.0 (with '=') in shells to avoid arg parsing.",
+    )
+    args = p.parse_args(argv)
+
     agent_dir = _resolve_agent_dir(agent_name)
     config = _load_agent_config(agent_name)
+
+    rule = config.RULE
+    if args.threshold is not None:
+        rule = Rule(
+            name=config.RULE.name,
+            params={**config.RULE.params, "threshold": args.threshold},
+        )
+        log.info(
+            "threshold override via CLI: %+.2f (config default was %+.2f)",
+            args.threshold, config.RULE.params.get("threshold", 0.0),
+        )
 
     use_mock = os.getenv("USE_MOCK", "1") == "1"
     log.info("start: agent=%s use_mock=%s", agent_name, use_mock)
 
-    signal = threshold.evaluate(agent_name, config.PROBE, config.RULE)
+    signal = threshold.evaluate(agent_name, config.PROBE, rule)
     if signal is None:
         log.info("threshold not fired for %s — no alert", config.PRICE_KEY)
         print(f"[{agent_name}] threshold not fired — no alert.")
@@ -238,7 +267,7 @@ def main() -> None:
     if len(sys.argv) < 2:
         print(
             "Usage:\n"
-            "  python run.py <agent_name>\n"
+            "  python run.py <agent_name> [--threshold=SIGNED_PCT]\n"
             "  python run.py <agent_name> feedback <run_id> "
             "--rating {-1|0|1} [--tag T]* [--note \"...\"]",
             file=sys.stderr,
@@ -251,7 +280,7 @@ def main() -> None:
     if rest and rest[0] == "feedback":
         cmd_feedback(agent_name, rest[1:])
     else:
-        cmd_run(agent_name)
+        cmd_run(agent_name, rest)
 
 
 if __name__ == "__main__":
